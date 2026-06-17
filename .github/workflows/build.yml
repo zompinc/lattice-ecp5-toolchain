@@ -36,12 +36,18 @@ concurrency:
 
 jobs:
   build:
-    # Self-hosted to match the rest of the Zomp Linux runner pool (also
-    # used by zompinc/fw-pig8d-next CI). Triggers are master-push,
-    # workflow_dispatch, and cron — no pull_request — so external-fork
-    # attack surface stays at zero. Caveat: the Monday-06:00-UTC cron
-    # only fires if a runner is online at that moment.
-    runs-on: [self-hosted, linux]
+    # GitHub-hosted runner because the repo is public:
+    #   1. Public repos get unlimited free github-hosted minutes — no
+    #      billing case for self-hosted.
+    #   2. Public-repo self-hosted runners are a real attack surface the
+    #      moment anyone adds a `pull_request` trigger; clean separation
+    #      is the safer default for an image other people pull.
+    #   3. github-hosted's clean-every-time runner is a stronger
+    #      reproducibility guarantee for a public artifact than
+    #      self-hosted state that persists across runs.
+    #   4. Monday-06:00-UTC cron fires unconditionally, no "runner has
+    #      to be online" caveat.
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
