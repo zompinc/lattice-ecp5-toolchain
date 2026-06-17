@@ -15,22 +15,23 @@ authentication.
 Built on `mcr.microsoft.com/devcontainers/base:trixie`, the image
 adds:
 
-| Tool | Source | Version |
+| Tool | Source | Pin |
 | --- | --- | --- |
 | yosys | apt (trixie) | distro |
 | nextpnr-ecp5 | apt (trixie) | distro |
 | fpga-trellis | apt (trixie) | distro |
 | openocd | apt (trixie) | distro |
-| openFPGALoader | source | pinned tag (`v1.1.1` at time of writing) |
-| prjtrellis | source | pinned tag |
-| ecpprog | source | pinned commit |
-| openocd-vexriscv | source (SpinalHDL fork) | pinned commit, installed at `/opt/openocd-vexriscv` |
+| openFPGALoader | source | `v1.1.1` |
+| prjtrellis | source | `1.4` |
+| ecpprog | source | `1931c3e` |
+| openocd-vexriscv | source (SpinalHDL fork) | `a0220ad` (installed at `/opt/openocd-vexriscv`) |
 | RISC-V cross-compiler | apt (`gcc-riscv64-unknown-elf`) | distro |
 | LiteX + migen + litedram | pip (git HEAD) | tracking upstream |
 | `pythondata-cpu-vexriscv` + `compiler_rt` + `picolibc` | pip (git) | tracking upstream |
 
-All pinned via Dockerfile `ARG`s so version bumps are intent-only.
-Run the weekly cron or push a Dockerfile change to refresh `latest`.
+Pins live in Dockerfile `ARG`s — bumps are intent-only. The weekly
+cron or any Dockerfile change refreshes `latest`. This table can lag
+the Dockerfile by a build or two; the Dockerfile is authoritative.
 
 ## Usage
 
