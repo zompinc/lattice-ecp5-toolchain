@@ -1,6 +1,13 @@
-# Build + publish the Lattice ECP5 toolchain image to GHCR.
+# Build + publish the Lattice ECP5 toolchain image to GHCR and Docker Hub.
 #
-# Image: ghcr.io/zompinc/lattice-ecp5-toolchain
+# Images:
+#   ghcr.io/zompinc/lattice-ecp5-toolchain      — primary, always pushed
+#   docker.io/<vars.DOCKERHUB_USERNAME>/lattice-ecp5-toolchain
+#                                               — mirror, pushed when
+#                                                 the DOCKERHUB_USERNAME
+#                                                 variable and
+#                                                 DOCKERHUB_TOKEN secret
+#                                                 are both set
 # Tags written:
 #   - latest                — moves on every successful build
 #   - <short sha>           — pin a specific commit's image
@@ -14,6 +21,17 @@
 #
 # Build cost is ~15 min (mostly the openocd_riscv autoconf+make). GHA
 # cache cuts that to ~3 min on subsequent runs touching only late layers.
+#
+# Docker Hub setup (one-time): in repo Settings → Secrets and variables
+# → Actions:
+#   - Variables tab → New repository variable
+#       Name:  DOCKERHUB_USERNAME
+#       Value: Docker Hub org/user that owns the mirror (e.g. zompinc)
+#   - Secrets tab → New repository secret
+#       Name:  DOCKERHUB_TOKEN
+#       Value: Docker Hub access token with Read & Write permission
+# Until both are set, the Docker Hub login + push steps skip cleanly via
+# the `if:` guards below — GHCR push still happens normally.
 
 name: Build toolchain image
 
@@ -65,11 +83,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        if: vars.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Compute image tags
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/lattice-ecp5-toolchain
+          # Multi-line `images` list: each non-empty line becomes a target.
+          # When DOCKERHUB_USERNAME is unset the docker.io line is empty
+          # and metadata-action drops it, so the mirror is auto-skipped.
+          images: |
+            ghcr.io/${{ github.repository_owner }}/lattice-ecp5-toolchain
+            ${{ vars.DOCKERHUB_USERNAME && format('docker.io/{0}/lattice-ecp5-toolchain', vars.DOCKERHUB_USERNAME) || '' }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short

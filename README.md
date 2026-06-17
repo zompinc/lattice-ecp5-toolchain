@@ -1,10 +1,15 @@
 # lattice-ecp5-toolchain
 
 Public Docker image bundling the open-source Lattice ECP5 development
-toolchain — published to
-[`ghcr.io/zompinc/lattice-ecp5-toolchain`](https://github.com/zompinc/lattice-ecp5-toolchain/pkgs/container/lattice-ecp5-toolchain)
-on every Dockerfile change and rebuilt weekly to track upstream LiteX
-and migen updates.
+toolchain — published to both GitHub Container Registry and Docker Hub
+on every Dockerfile change, rebuilt weekly to track upstream LiteX and
+migen updates:
+
+- `ghcr.io/zompinc/lattice-ecp5-toolchain`
+- `docker.io/zompinc/lattice-ecp5-toolchain` (mirror)
+
+Either works; ghcr is the source of truth and Docker Hub is mirrored
+from the same build run.
 
 Maintained by [Zomp](https://zomp.com) for use across our ECP5
 projects, but published publicly so anyone can pull it without GitHub
