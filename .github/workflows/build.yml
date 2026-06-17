@@ -1,0 +1,83 @@
+# Build + publish the Lattice ECP5 toolchain image to GHCR.
+#
+# Image: ghcr.io/zompinc/lattice-ecp5-toolchain
+# Tags written:
+#   - latest                — moves on every successful build
+#   - <short sha>           — pin a specific commit's image
+#
+# Triggers:
+#   - push to master that touches the Dockerfile or this workflow — keeps
+#     the published image in sync with the Dockerfile in the same commit
+#   - workflow_dispatch — manual rebuild from the Actions tab
+#   - weekly cron — rebuilds even when nothing changed, picking up
+#     upstream LiteX / migen updates pinned to git HEAD in the Dockerfile
+#
+# Build cost is ~15 min (mostly the openocd_riscv autoconf+make). GHA
+# cache cuts that to ~3 min on subsequent runs touching only late layers.
+
+name: Build toolchain image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+  schedule:
+    # Weekly Monday 06:00 UTC. LiteX moves fast enough that a weekly
+    # refresh catches most upstream fixes without spamming notifications.
+    - cron: '0 6 * * 1'
+
+# Avoid two concurrent builds racing each other's `latest` tag push.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Self-hosted to match the rest of the Zomp Linux runner pool (also
+    # used by zompinc/fw-pig8d-next CI). Triggers are master-push,
+    # workflow_dispatch, and cron — no pull_request — so external-fork
+    # attack surface stays at zero. Caveat: the Monday-06:00-UTC cron
+    # only fires if a runner is online at that moment.
+    runs-on: [self-hosted, linux]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/lattice-ecp5-toolchain
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # GHA cache makes subsequent runs that change only late layers
+          # (e.g. just the pip install line) much faster. apt + autotools
+          # layers survive across runs.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
